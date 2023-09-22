@@ -11,27 +11,30 @@ import pathlib
 import os
 
 
-output_dir = "/tmp/saved_model"
+if __name__ == "__main__":
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # hide some warning messages from Tensorflow
 
-# load pre-trained model
-model = tf.keras.applications.MobileNetV2(
-    weights="imagenet",
-    input_shape=(224, 224, 3)
-)
+    output_dir = "/tmp/saved_model_mob2"
 
-# use concrete function
-run_model = tf.function(lambda x: model)
-concrete_function = run_model.get_concrete_function(
-    tf.TensorSpec(model.inputs[0].shape, model.inputs[0].dtype)
-)
+    # load pre-trained model
+    model = tf.keras.applications.MobileNetV2(
+        weights="imagenet",
+        input_shape=(224, 224, 3)
+    )
+
+    # use concrete function
+    run_model = tf.function(lambda x: model)
+    concrete_function = run_model.get_concrete_function(
+        tf.TensorSpec(model.inputs[0].shape, model.inputs[0].dtype)
+    )
 
 
-# convert to tflite
-converter = tf.lite.TFLiteConverter.from_concrete_function([concrete_function])
-tflite_model = converter.convert()
+    # convert to tflite
+    converter = tf.lite.TFLiteConverter.from_concrete_function([concrete_function])
+    tflite_model = converter.convert()
 
-# save it
-tflite_model_file = pathlib.Path(
-    os.path.join(output_dir, "tflite-mobilenet-1.tflite")
-)
-tflite_model_file.write_bytes(tflite_model)
+    # save it
+    tflite_model_file = pathlib.Path(
+        os.path.join(output_dir, "tflite-mobilenet-1.tflite")
+    )
+    tflite_model_file.write_bytes(tflite_model)
