@@ -1,9 +1,13 @@
 # Environment to use MicroCoral
 #
 # to build:
-# docker build --force-rm -t microcoral -f .\Dockerfile .
+# docker build --force-rm -t microcoral -f Dockerfile .
 #
-# docker run --rm --name coral -it bash
+# as root:
+# docker run --rm --name coral -d -it microcoral
+# as user:
+# docker run --rm --name coral -d -u $(id -u):$(id -g) -it microcoral
+# docker exec -it coral bash
 #
 FROM tensorflow/tensorflow:2.14.0rc1-jupyter
 
