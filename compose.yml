@@ -1,0 +1,10 @@
+services:
+  coral:
+    image: microcoral
+    build:
+      context: .
+      dockerfile: Dockerfile
+    network_mode: "host"
+    restart: on-failure
+    ports:
+      - "8888:8888"
