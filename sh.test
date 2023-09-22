@@ -1,7 +1,13 @@
 #!/bin/bash
 
+# hide some warning messages
+export TF_CPP_MIN_LOG_LEVEL=3
+
+echo "Basic sum:"
 python3 -c "import tensorflow as tf; print(tf.reduce_sum(tf.random.normal([1000, 1000])))"
 
+echo "GPUS?"
 python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 
+echo "TFLite:"
 python3 -c "import tensorflow.lite as tflite; print(tflite.__name__)"

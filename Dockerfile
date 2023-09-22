@@ -14,7 +14,19 @@ FROM tensorflow/tensorflow:2.14.0rc1-jupyter
 RUN pip3 install pip --upgrade
 RUN pip3 install opencv-python opencv-contrib-python
 
-ARG BASE_DIR="/tf"
-WORKDIR $ARG
-COPY code/ $ARG
-COPY sh.test $ARG
+#
+# SSH
+#
+COPY keys/id_tflite.pub /root/.ssh/authorized_keys
+RUN chmod 600 /root/.ssh/authorized_keys
+RUN apt -y install openssh-server
+EXPOSE 22
+
+#
+# code to container
+#
+ARG BASE_DIR="/tf/code"
+WORKDIR $BASE_DIR
+COPY code/* $BASE_DIR
+COPY sh.test $BASE_DIR
+
