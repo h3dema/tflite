@@ -216,4 +216,8 @@ if __name__ == "__main__":
     # Here, I have used 20% data as test/valid set
     X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2, random_state=123)
 
-    train(X_train, X_valid, y_train, y_valid)
+    model = train(X_train, X_valid, y_train, y_valid)
+    #
+    # to convert to tflite, the model needs to be saved using saved_model.save()
+    #
+    tf.saved_model.save(model, "output_dir") 
