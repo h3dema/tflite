@@ -2,7 +2,7 @@ import os
 import numpy as np  # for using np arrays
 
 # for reading and processing images
-import imageio
+import imageio.v2 as imageio
 from PIL import Image
 
 # for visualizations
@@ -76,25 +76,44 @@ def PreprocessData(img, mask, target_shape_img, target_shape_mask, path1, path2)
 
 
 def train(X_train, X_valid, y_train, y_valid):
+    checkpoint_path = "training/cp-{epoch:04d}.ckpt"
+    os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
+    
     #
     # Net Architecture
     #
     #
     # Call the helper function for defining the layers for the model, given the input image size
-    unet = UNet(input_size=(128, 128, 3), n_filters=32, n_classes=3)
+    model = UNet(input_size=(128, 128, 3), n_filters=32, n_classes=3)
     # Check the summary to better interpret how the output dimensions change in each layer
-    print("Model:\n", unet.summary())
+    print("Model:\n", model.summary())
 
+    # Create a callback that saves the model's weights
+    cp_callback = tf.keras.callbacks.ModelCheckpoint(
+        filepath=checkpoint_path,
+        save_weights_only=True,
+        verbose=1
+    )
+    
     # There are multiple optimizers, loss functions and metrics that can be used to compile multi-class segmentation models
     # Ideally, try different options to get the best accuracy
-    unet.compile(
+    model.compile(
         optimizer=tf.keras.optimizers.Adam(),
         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
         metrics=['accuracy']
     )
     # Run the model in a mini-batch fashion and compute the progress for each epoch
-    results = unet.fit(X_train, y_train, batch_size=32, epochs=20, validation_data=(X_valid, y_valid))
-
+    results = model.fit(
+        X_train, y_train, 
+        batch_size=32, 
+        epochs=20, 
+        validation_data=(X_valid, y_valid),
+        callbacks=[cp_callback],  # Pass callback to training
+    )
+    
+    # save final model
+    model.save_weights(checkpoint_path.format(epoch=0))
+    
     #
     # Bias Variance Check
     #
@@ -124,13 +143,13 @@ def train(X_train, X_valid, y_train, y_valid):
     # View Predicted Segmentations
     #
     #
-    unet.evaluate(X_valid, y_valid)
+    model.evaluate(X_valid, y_valid)
 
-    # Results of Validation Dataset
     def VisualizeResults(index):
+        # show results of Validation Dataset
         img = X_valid[index]
         img = img[np.newaxis, ...]
-        pred_y = unet.predict(img)
+        pred_y = model.predict(img)
         pred_mask = tf.argmax(pred_y[0], axis=-1)
         pred_mask = pred_mask[..., tf.newaxis]
         fig, arr = plt.subplots(1, 3, figsize=(15, 15))
@@ -147,7 +166,7 @@ def train(X_train, X_valid, y_train, y_valid):
     index = 700
     VisualizeResults(index)
 
-    return unet
+    return model
 
 
 if __name__ == "__main__":
