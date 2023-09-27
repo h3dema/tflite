@@ -1,6 +1,10 @@
-import tensorflow as tf
 import pathlib
 import os
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # disable all debugging logs 
+
+import tensorflow as tf
+
 
 if __name__ == "__main__":
     output_dir = "output_dir"  # where the tensorflow model is

@@ -1,3 +1,8 @@
+#
+# Train the segmentation model (UNet)
+#
+# TODO: select between CPU or GPU
+#
 import os
 import numpy as np  # for using np arrays
 
@@ -9,8 +14,10 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # disable all debugging logs 
+
 import tensorflow as tf
-from unet import UNet
+from unet import UNet, ShallowUNet
 
 
 def LoadData(path1, path2):
@@ -75,7 +82,67 @@ def PreprocessData(img, mask, target_shape_img, target_shape_mask, path1, path2)
     return X, y
 
 
-def train(X_train, X_valid, y_train, y_valid):
+def plot_bias_variance(results, out_fname: str = None):
+    # High Bias is a characteristic of an underfitted model and we would observe low accuracies for both train and validation set
+    # High Variance is a characterisitic of an overfitted model and we would observe high accuracy for train set and low for validation set
+    # To check for bias and variance plit the graphs for accuracy
+    # I have plotted for loss too, this helps in confirming if the loss is decreasing with each iteration - hence, the model is optimizing fine
+    fig, axis = plt.subplots(1, 2, figsize=(20, 5))
+    axis[0].plot(results.history["loss"], color='r', label='train loss')
+    axis[0].plot(results.history["val_loss"], color='b', label='dev loss')
+    axis[0].set_title('Loss Comparison')
+    axis[0].legend()
+    axis[1].plot(results.history["accuracy"], color='r', label='train accuracy')
+    axis[1].plot(results.history["val_accuracy"], color='b', label='dev accuracy')
+    axis[1].set_title('Accuracy Comparison')
+    axis[1].legend()
+
+    # RESULTS
+    # The train loss is consistently decreasing showing that Adam is able to optimize the model and find the minima
+    # The accuracy of train and validation is ~90% which is high enough, so low bias
+    # and the %s aren't that far apart, hence low variance
+    if out_fname is None:
+        plt.show()
+    else:
+        fig.savefig(out_fname)
+    plt.close(fig)
+
+
+def visualize_output(X, y, index, out_fname: str = None):
+    fig, arr = plt.subplots(1, 2, figsize=(15, 15))
+    arr[0].imshow(X[image_index])
+    arr[0].set_title('Processed Image')
+    arr[1].imshow(y[image_index, :, :, 0])
+    arr[1].set_title('Processed Masked Image ')
+    if out_fname is None:
+        plt.show()
+    else:
+        fig.savefig(out_fname)
+    plt.close(fig)
+
+    
+def VisualizeResults(index, X_valid, y_valid, model):
+    # show results of Validation Dataset
+    img = X_valid[index]
+    img = img[np.newaxis, ...]
+    pred_y = model.predict(img)
+    pred_mask = tf.argmax(pred_y[0], axis=-1)
+    pred_mask = pred_mask[..., tf.newaxis]
+    fig, arr = plt.subplots(1, 3, figsize=(15, 15))
+    arr[0].imshow(X_valid[index])
+    arr[0].set_title('Processed Image')
+    arr[1].imshow(y_valid[index, :, :, 0])
+    arr[1].set_title('Actual Masked Image ')
+    arr[2].imshow(pred_mask[:, :, 0])
+    arr[2].set_title('Predicted Masked Image ')
+    fig.savefig(f"visualize_results_{index}.png")
+    plt.close(fig)
+
+    
+def train(X_train, X_valid, y_train, y_valid,
+          epochs=20,
+          shallow_unet: bool = True  # True to use shallow Unet (3 levels), False (5 levels)
+         ):
     checkpoint_path = "training/cp-{epoch:04d}.ckpt"
     os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
     
@@ -84,7 +151,11 @@ def train(X_train, X_valid, y_train, y_valid):
     #
     #
     # Call the helper function for defining the layers for the model, given the input image size
-    model = UNet(input_size=(128, 128, 3), n_filters=32, n_classes=3)
+    if shallow_unet:
+        print("Using shallow model")
+        model = ShallowUNet(input_size=(128, 128, 3), n_filters=32, n_classes=3)
+    else:
+        model = UNet(input_size=(128, 128, 3), n_filters=32, n_classes=3)
     # Check the summary to better interpret how the output dimensions change in each layer
     print("Model:\n", model.summary())
 
@@ -106,7 +177,7 @@ def train(X_train, X_valid, y_train, y_valid):
     results = model.fit(
         X_train, y_train, 
         batch_size=32, 
-        epochs=20, 
+        epochs=epochs, 
         validation_data=(X_valid, y_valid),
         callbacks=[cp_callback],  # Pass callback to training
     )
@@ -117,27 +188,7 @@ def train(X_train, X_valid, y_train, y_valid):
     #
     # Bias Variance Check
     #
-    #
-    # High Bias is a characteristic of an underfitted model and we would observe low accuracies for both train and validation set
-    # High Variance is a characterisitic of an overfitted model and we would observe high accuracy for train set and low for validation set
-    # To check for bias and variance plit the graphs for accuracy
-    # I have plotted for loss too, this helps in confirming if the loss is decreasing with each iteration - hence, the model is optimizing fine
-    fig, axis = plt.subplots(1, 2, figsize=(20, 5))
-    axis[0].plot(results.history["loss"], color='r', label='train loss')
-    axis[0].plot(results.history["val_loss"], color='b', label='dev loss')
-    axis[0].set_title('Loss Comparison')
-    axis[0].legend()
-    axis[1].plot(results.history["accuracy"], color='r', label='train accuracy')
-    axis[1].plot(results.history["val_accuracy"], color='b', label='dev accuracy')
-    axis[1].set_title('Accuracy Comparison')
-    axis[1].legend()
-
-    # RESULTS
-    # The train loss is consistently decreasing showing that Adam is able to optimize the model and find the minima
-    # The accuracy of train and validation is ~90% which is high enough, so low bias
-    # and the %s aren't that far apart, hence low variance
-    fig.savefig("bias_variance_check.png")
-    plt.close(fig)
+    plot_bias_variance(results, out_fname="bias_variance_check.png")
 
     #
     # View Predicted Segmentations
@@ -145,26 +196,9 @@ def train(X_train, X_valid, y_train, y_valid):
     #
     model.evaluate(X_valid, y_valid)
 
-    def VisualizeResults(index):
-        # show results of Validation Dataset
-        img = X_valid[index]
-        img = img[np.newaxis, ...]
-        pred_y = model.predict(img)
-        pred_mask = tf.argmax(pred_y[0], axis=-1)
-        pred_mask = pred_mask[..., tf.newaxis]
-        fig, arr = plt.subplots(1, 3, figsize=(15, 15))
-        arr[0].imshow(X_valid[index])
-        arr[0].set_title('Processed Image')
-        arr[1].imshow(y_valid[index, :, :, 0])
-        arr[1].set_title('Actual Masked Image ')
-        arr[2].imshow(pred_mask[:, :, 0])
-        arr[2].set_title('Predicted Masked Image ')
-        fig.savefig(f"visualize_results_{index}.png")
-        plt.close(fig)
-
     # Add any index to contrast the predicted mask with actual mask
     index = 700
-    VisualizeResults(index)
+    VisualizeResults(index, X_valid, y_valid, model)
 
     return model
 
@@ -175,7 +209,8 @@ if __name__ == "__main__":
     #
     path1 = 'images/original/'
     path2 = 'images/masks/'
-
+    SHALLOW_UNET = True
+    
     # Call the apt function
     img, mask = LoadData(path1, path2)
 
@@ -202,21 +237,19 @@ if __name__ == "__main__":
     print("X Shape:", X.shape)
     print("Y shape:", y.shape)
     # There are 3 classes : background, pet, outline
-    print(np.unique(y))
+    print("Classes:", np.unique(y))
 
     # Visualize the output
     image_index = 0
-    fig, arr = plt.subplots(1, 2, figsize=(15, 15))
-    arr[0].imshow(X[image_index])
-    arr[0].set_title('Processed Image')
-    arr[1].imshow(y[image_index, :, :, 0])
-    arr[1].set_title('Processed Masked Image ')
-
+    visualize_output(X, y, image_index, out_fname="output.png")
+    
     # Use scikit-learn's function to split the dataset
     # Here, I have used 20% data as test/valid set
     X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2, random_state=123)
 
-    model = train(X_train, X_valid, y_train, y_valid)
+    model = train(X_train, X_valid, y_train, y_valid, 
+                  # epochs=1,
+                  shallow_unet=SHALLOW_UNET)
     #
     # to convert to tflite, the model needs to be saved using saved_model.save()
     #
