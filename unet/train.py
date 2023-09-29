@@ -141,6 +141,7 @@ def VisualizeResults(index, X_valid, y_valid, model):
     
 def train(X_train, X_valid, y_train, y_valid,
           epochs=20,
+          input_size=(128, 128, 3),
           shallow_unet: bool = True  # True to use shallow Unet (3 levels), False (5 levels)
          ):
     checkpoint_path = "training/cp-{epoch:04d}.ckpt"
@@ -151,11 +152,12 @@ def train(X_train, X_valid, y_train, y_valid,
     #
     #
     # Call the helper function for defining the layers for the model, given the input image size
+    # Note: the output will be [128, 128, n_classes]
     if shallow_unet:
         print("Using shallow model")
-        model = ShallowUNet(input_size=(128, 128, 3), n_filters=32, n_classes=3)
+        model = ShallowUNet(input_size=input_size, n_filters=32, n_classes=3)
     else:
-        model = UNet(input_size=(128, 128, 3), n_filters=32, n_classes=3)
+        model = UNet(input_size=input_size, n_filters=32, n_classes=3)
     # Check the summary to better interpret how the output dimensions change in each layer
     print("Model:\n", model.summary())
 
@@ -248,7 +250,7 @@ if __name__ == "__main__":
     X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2, random_state=123)
 
     model = train(X_train, X_valid, y_train, y_valid, 
-                  # epochs=1,
+                  epochs=1,
                   shallow_unet=SHALLOW_UNET)
     #
     # to convert to tflite, the model needs to be saved using saved_model.save()

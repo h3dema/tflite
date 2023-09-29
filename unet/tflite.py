@@ -14,7 +14,7 @@ if __name__ == "__main__":
     #
     # see valid optimizations at https://www.tensorflow.org/api_docs/python/tf/lite/Optimize
     #
-    converter.optimizations = [tf.lite.Optimize.OPTIMIZE_FOR_SIZE]
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
     tflite_model = converter.convert()
     # save
     tflite_model_file = pathlib.Path(
