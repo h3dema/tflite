@@ -250,7 +250,7 @@ if __name__ == "__main__":
     X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2, random_state=123)
 
     model = train(X_train, X_valid, y_train, y_valid, 
-                  epochs=1,
+                  epochs=20,
                   shallow_unet=SHALLOW_UNET)
     #
     # to convert to tflite, the model needs to be saved using saved_model.save()
