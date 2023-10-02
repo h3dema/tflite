@@ -33,7 +33,6 @@ def LoadData(path1, path2, limit: int = None):
     """
     # Read the images folder like a list
     image_dataset = os.listdir(path1)
-    mask_dataset = os.listdir(path2)
 
     # Make a list for images and masks filenames
     orig_img = []
@@ -211,7 +210,7 @@ def train(X_train, X_valid, y_train, y_valid,
     model.evaluate(X_valid, y_valid)
 
     # Add any index to contrast the predicted mask with actual mask
-    index = 700
+    index = min(LIMIT - 1, 700)
     VisualizeResults(index, X_valid, y_valid, model)
 
     return model

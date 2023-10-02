@@ -197,6 +197,7 @@ def ShallowUNet(input_size=(128, 128, 3), n_filters=32, n_classes=3, dropout_pro
 
     return model
 
+
 if __name__ == "__main__":
     SHALLOW_UNET = True  # True to use shallow Unet (3 levels), False (5 levels)
 
