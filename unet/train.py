@@ -48,7 +48,8 @@ def LoadData(path1, path2, limit: int = None):
     orig_img.sort()
 
     # the dataset has exactly the same name for images and corresponding masks
-    mask_img = [os.path.join(path2, os.path.basename(fname).replace(".jpg", ".png")) for fname in orig_img]
+    # mask_img = [os.path.join(path2, os.path.basename(fname).replace(".jpg", ".png")) for fname in orig_img]
+    mask_img = [os.path.basename(fname).replace(".jpg", ".png") for fname in orig_img]
     # for file in mask_dataset:
     #     mask_img.append(file)
     # mask_img.sort()
@@ -151,7 +152,7 @@ def VisualizeResults(index, X_valid, y_valid, model):
 
 
 def train(X_train, X_valid, y_train, y_valid,
-          epochs=20,
+          epochs=1,
           input_size=(128, 128, 3),
           shallow_unet: bool = True  # True to use shallow Unet (3 levels), False (5 levels)
           ):
@@ -263,7 +264,7 @@ if __name__ == "__main__":
     X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2, random_state=123)
 
     model = train(X_train, X_valid, y_train, y_valid,
-                  epochs=20,
+                  epochs=1,
                   shallow_unet=SHALLOW_UNET)
     #
     # to convert to tflite, the model needs to be saved using saved_model.save()
