@@ -4,23 +4,28 @@
 # TODO: select between CPU or GPU
 #
 import os
+import random
 import numpy as np  # for using np arrays
 
 # for reading and processing images
-import imageio.v2 as imageio
+try:
+    import imageio.v2 as imageio
+except ModuleNotFoundError:
+    import imageio
+
 from PIL import Image
 
 # for visualizations
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # disable all debugging logs 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # disable all debugging logs
 
 import tensorflow as tf
 from unet import UNet, ShallowUNet
 
 
-def LoadData(path1, path2):
+def LoadData(path1, path2, limit: int = None):
     """
     Looks for relevant filenames in the shared path
     Returns 2 lists for original and masked files respectively
@@ -32,15 +37,21 @@ def LoadData(path1, path2):
 
     # Make a list for images and masks filenames
     orig_img = []
-    mask_img = []
     for file in image_dataset:
         orig_img.append(file)
-    for file in mask_dataset:
-        mask_img.append(file)
 
-    # Sort the lists to get both of them in same order (the dataset has exactly the same name for images and corresponding masks)
+    if limit is not None:
+        print("Limit dataset to {} samples".format(limit))
+        orig_img = random.sample(orig_img, limit)
+
+    # Sort the lists to get both of them in same order
     orig_img.sort()
-    mask_img.sort()
+
+    # the dataset has exactly the same name for images and corresponding masks
+    mask_img = [os.path.join(path2, os.path.basename(fname).replace(".jpg", ".png")) for fname in orig_img]
+    # for file in mask_dataset:
+    #     mask_img.append(file)
+    # mask_img.sort()
 
     return orig_img, mask_img
 
@@ -120,7 +131,7 @@ def visualize_output(X, y, index, out_fname: str = None):
         fig.savefig(out_fname)
     plt.close(fig)
 
-    
+
 def VisualizeResults(index, X_valid, y_valid, model):
     # show results of Validation Dataset
     img = X_valid[index]
@@ -138,24 +149,26 @@ def VisualizeResults(index, X_valid, y_valid, model):
     fig.savefig(f"visualize_results_{index}.png")
     plt.close(fig)
 
-    
+
 def train(X_train, X_valid, y_train, y_valid,
-          epochs=20,
+          epochs=1,
+          input_size=(128, 128, 3),
           shallow_unet: bool = True  # True to use shallow Unet (3 levels), False (5 levels)
          ):
     checkpoint_path = "training/cp-{epoch:04d}.ckpt"
     os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
-    
+
     #
     # Net Architecture
     #
     #
     # Call the helper function for defining the layers for the model, given the input image size
+    # Note: the output will be [128, 128, n_classes]
     if shallow_unet:
         print("Using shallow model")
-        model = ShallowUNet(input_size=(128, 128, 3), n_filters=32, n_classes=3)
+        model = ShallowUNet(input_size=input_size, n_filters=32, n_classes=3)
     else:
-        model = UNet(input_size=(128, 128, 3), n_filters=32, n_classes=3)
+        model = UNet(input_size=input_size, n_filters=32, n_classes=3)
     # Check the summary to better interpret how the output dimensions change in each layer
     print("Model:\n", model.summary())
 
@@ -165,7 +178,7 @@ def train(X_train, X_valid, y_train, y_valid,
         save_weights_only=True,
         verbose=1
     )
-    
+
     # There are multiple optimizers, loss functions and metrics that can be used to compile multi-class segmentation models
     # Ideally, try different options to get the best accuracy
     model.compile(
@@ -175,16 +188,16 @@ def train(X_train, X_valid, y_train, y_valid,
     )
     # Run the model in a mini-batch fashion and compute the progress for each epoch
     results = model.fit(
-        X_train, y_train, 
-        batch_size=32, 
-        epochs=epochs, 
+        X_train, y_train,
+        batch_size=32,
+        epochs=epochs,
         validation_data=(X_valid, y_valid),
         callbacks=[cp_callback],  # Pass callback to training
     )
-    
+
     # save final model
     model.save_weights(checkpoint_path.format(epoch=0))
-    
+
     #
     # Bias Variance Check
     #
@@ -210,9 +223,11 @@ if __name__ == "__main__":
     path1 = 'images/original/'
     path2 = 'images/masks/'
     SHALLOW_UNET = True
-    
+    LIMIT = 20
+    OUTPUT_DIR = "$OUTDIR"
+
     # Call the apt function
-    img, mask = LoadData(path1, path2)
+    img, mask = LoadData(path1, path2, limit=LIMIT)
 
     # View an example of image and corresponding mask
     show_images = 1
@@ -242,15 +257,15 @@ if __name__ == "__main__":
     # Visualize the output
     image_index = 0
     visualize_output(X, y, image_index, out_fname="output.png")
-    
+
     # Use scikit-learn's function to split the dataset
     # Here, I have used 20% data as test/valid set
     X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2, random_state=123)
 
-    model = train(X_train, X_valid, y_train, y_valid, 
-                  # epochs=1,
+    model = train(X_train, X_valid, y_train, y_valid,
+                  epochs=1,
                   shallow_unet=SHALLOW_UNET)
     #
     # to convert to tflite, the model needs to be saved using saved_model.save()
     #
-    tf.saved_model.save(model, "output_dir") 
+    tf.saved_model.save(model, OUTPUT_DIR)
