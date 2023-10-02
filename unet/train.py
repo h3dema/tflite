@@ -3,6 +3,7 @@
 #
 # TODO: select between CPU or GPU
 #
+import argparse
 import os
 import random
 import numpy as np  # for using np arrays
@@ -210,7 +211,7 @@ def train(X_train, X_valid, y_train, y_valid,
     model.evaluate(X_valid, y_valid)
 
     # Add any index to contrast the predicted mask with actual mask
-    index = min(LIMIT - 1, 700)
+    index = min(X_valid.shape[0] - 1, 700)
     VisualizeResults(index, X_valid, y_valid, model)
 
     return model
@@ -223,11 +224,17 @@ if __name__ == "__main__":
     path1 = 'images/original/'
     path2 = 'images/masks/'
     SHALLOW_UNET = True
-    LIMIT = 20
-    OUTPUT_DIR = "$OUTDIR"
+
+    parser = argparse.ArgumentParser(description='Train model')
+    parser.add_argument('--limit', type=int, default=None)
+    parser.add_argument('--output_dir', type=str, default="output_dir")
+    parser.add_argument('--epochs', type=int, default=20)
+    parser.add_argument('--shallow-unet', action="store_true")
+
+    args = parser.parse_args()
 
     # Call the apt function
-    img, mask = LoadData(path1, path2, limit=LIMIT)
+    img, mask = LoadData(path1, path2, limit=args.limit)
 
     # View an example of image and corresponding mask
     show_images = 1
@@ -263,9 +270,9 @@ if __name__ == "__main__":
     X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2, random_state=123)
 
     model = train(X_train, X_valid, y_train, y_valid,
-                  epochs=1,
+                  epochs=args.epochs,
                   shallow_unet=SHALLOW_UNET)
     #
     # to convert to tflite, the model needs to be saved using saved_model.save()
     #
-    tf.saved_model.save(model, OUTPUT_DIR)
+    tf.saved_model.save(model, args.output_dir)
