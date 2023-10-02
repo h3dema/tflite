@@ -10,21 +10,23 @@ Known error on coralmicro:
 - https://github.com/tensorflow/tensorflow/issues/43232
 
 """
-
-
+import argparse
 import pathlib
 import os
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # disable all debugging logs 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # disable all debugging logs
 
 import tensorflow as tf
 
 
 if __name__ == "__main__":
-    output_dir = "output_dir"  # where the tensorflow model is
-    
+    parser = argparse.ArgumentParser(description='Train model')
+    # where the tensorflow model is, and we are going to save the tflite model in the same folder
+    parser.add_argument('--datafolder', type=str, default="output_dir")
+    args = parser.parse_args()
+
     # convert to tflite
-    converter = tf.lite.TFLiteConverter.from_saved_model(output_dir)
+    converter = tf.lite.TFLiteConverter.from_saved_model(args.datafolder)
     #
     # see valid optimizations at https://www.tensorflow.org/api_docs/python/tf/lite/Optimize
     #
@@ -38,8 +40,8 @@ if __name__ == "__main__":
     tflite_model = converter.convert()
     # save
     tflite_model_file = pathlib.Path(
-        os.path.join(output_dir, "tflite-regression.tflite")
+        os.path.join(args.datafolder, "tflite-regression.tflite")
     )
-    nbytes = tflite_model_file.write_bytes(tflite_model) 
+    nbytes = tflite_model_file.write_bytes(tflite_model)
     print(f"Saved tflite model at {tflite_model_file}. Size = {nbytes} bytes")
     print(f"with optimizations = {converter.optimizations}")
