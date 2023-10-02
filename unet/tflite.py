@@ -1,3 +1,17 @@
+"""
+
+Known error on coralmicro:
+> Didn't find op for builtin opcode 'CONV_2D' version '5'. An older version of this builtin might be supported.
+> Are you using an old TFLite binary with a newer model?
+>
+> Failed to get registration from op code CONV_2D
+
+
+- https://github.com/tensorflow/tensorflow/issues/43232
+
+"""
+
+
 import pathlib
 import os
 
@@ -14,7 +28,13 @@ if __name__ == "__main__":
     #
     # see valid optimizations at https://www.tensorflow.org/api_docs/python/tf/lite/Optimize
     #
-    converter.optimizations = [tf.lite.Optimize.OPTIMIZE_FOR_SIZE]
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
+    # ref. https://www.tensorflow.org/api_docs/python/tf/lite/TFLiteConverter
+    converter.experimental_new_converter = False
+    converter.experimental_new_quantizer = False
+    converter.experimental_enable_resource_variables = False
+    # converter.allow_custom_ops = False
+    converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS]
     tflite_model = converter.convert()
     # save
     tflite_model_file = pathlib.Path(
