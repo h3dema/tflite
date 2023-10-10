@@ -1,7 +1,18 @@
 """
 
-Converts the tensorflow model to a tflite model v1.
+Converts the tensorflow model to a tflite model.
+The tflite model works with the interpreter on the laptop (same version as this python module).
+But does not work on the Google Coral board we own. (2023/10/02)
 
+
+Known error on coralmicro:
+> Didn't find op for builtin opcode 'CONV_2D' version '5'. An older version of this builtin might be supported.
+> Are you using an old TFLite binary with a newer model?
+>
+> Failed to get registration from op code CONV_2D
+
+
+- https://github.com/tensorflow/tensorflow/issues/43232
 
 """
 
@@ -18,7 +29,7 @@ if __name__ == "__main__":
     output_dir = "output_dir"  # where the tensorflow model is
     
     # convert to tflite
-    converter = tf.compat.v1.lite.TFLiteConverter.from_saved_model(output_dir)
+    converter = tf.lite.TFLiteConverter.from_saved_model(output_dir)
     #
     # see valid optimizations at https://www.tensorflow.org/api_docs/python/tf/lite/Optimize
     #
@@ -32,8 +43,8 @@ if __name__ == "__main__":
     tflite_model = converter.convert()
     # save
     tflite_model_file = pathlib.Path(
-        os.path.join(output_dir, "tflite-regression.v1.tflite")
+        os.path.join(output_dir, "tflite-regression.tflite")
     )
     nbytes = tflite_model_file.write_bytes(tflite_model) 
-    print(f"Saved tflite model at {tflite_model_file}. Size = {nbytes} bytes")
-    print(f"with optimizations = {converter.optimizations}")
+    print("Saved tflite model at {}. Size = {} bytes".format(tflite_model_file, nbytes))
+    print("with optimizations = {}".format(converter.optimizations))
