@@ -1,6 +1,6 @@
 import os
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # disable all debugging logs 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # disable all debugging logs
 
 # for bulding and running deep learning model
 import tensorflow as tf
@@ -11,6 +11,10 @@ from tensorflow.keras.layers import Conv2D
 from tensorflow.keras.layers import BatchNormalization
 from tensorflow.keras.layers import Conv2DTranspose
 from tensorflow.keras.layers import concatenate
+
+
+KERNEL_INITIALIZER = "HeNormal"
+KERNEL_INITIALIZER = "he_normal"
 
 
 # --------------------------------------------
@@ -31,12 +35,12 @@ def EncoderMiniBlock(inputs, n_filters=32, dropout_prob=0.3, max_pooling=True):
                   3,   # Kernel size
                   activation='relu',
                   padding='same',
-                  kernel_initializer='HeNormal')(inputs)
+                  kernel_initializer=KERNEL_INITIALIZER)(inputs)
     conv = Conv2D(n_filters,
                   3,   # Kernel size
                   activation='relu',
                   padding='same',
-                  kernel_initializer='HeNormal')(conv)
+                  kernel_initializer=KERNEL_INITIALIZER)(conv)
 
     # Batch Normalization will normalize the output of the last layer based on the batch's mean and standard deviation
     conv = BatchNormalization()(conv, training=False)
@@ -88,12 +92,12 @@ def DecoderMiniBlock(prev_layer_input, skip_layer_input, n_filters=32):
                   3,     # Kernel size
                   activation='relu',
                   padding='same',
-                  kernel_initializer='HeNormal')(merge)
+                  kernel_initializer=KERNEL_INITIALIZER)(merge)
     conv = Conv2D(n_filters,
                   3,   # Kernel size
                   activation='relu',
                   padding='same',
-                  kernel_initializer='HeNormal')(conv)
+                  kernel_initializer=KERNEL_INITIALIZER)(conv)
     return conv
 
 
@@ -151,7 +155,7 @@ def UNet(input_size=(128, 128, 3), n_filters=32, n_classes=3, dropout_prob=0.3):
 #
 # 1------>5
 #  \     /
-#   2-->4 
+#   2-->4
 #    \ /
 #     3
 # --------------------------------------------
@@ -193,9 +197,10 @@ def ShallowUNet(input_size=(128, 128, 3), n_filters=32, n_classes=3, dropout_pro
 
     return model
 
+
 if __name__ == "__main__":
     SHALLOW_UNET = True  # True to use shallow Unet (3 levels), False (5 levels)
-    
+
     if SHALLOW_UNET:
         unet = ShallowUNet(input_size=(128, 128, 3), n_filters=32, n_classes=3)
         print(unet.summary())
