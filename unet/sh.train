@@ -1,27 +1,36 @@
+#!/bin/bash
 EPOCHS=2
 LIMIT=50
 
 python3 train.py --limit $LIMIT --epochs $EPOCHS \
     --model-name nn \
     --output-dir NN
-    
+python3 tflitev2.py --output-dir NN
+
+
 python3 train.py --limit $LIMIT --epochs $EPOCHS \
     --model-name nn \
     --dropout 0.2 \
     --output-dir NN_dropout
-    
+python3 tflitev2.py --output-dir NN_dropout
+
+
 python3 train.py --limit $LIMIT --epochs $EPOCHS \
     --model-name conv2d \
     --filters 2 \
     --kernel 128 \
     --output-dir conv2d
-    
+python3 tflitev2.py --output-dir conv2d
+
+
 python3 train.py --limit $LIMIT --epochs $EPOCHS \
     --model-name conv2d \
     --filters 2 \
     --kernels 128 \
     --dropout 0.2 \
     --output-dir conv2d_dropout
+python3 tflitev2.py --output-dir conv2d_dropout
+
 
 python3 train.py --limit $LIMIT --epochs $EPOCHS \
     --model-name conv2d \
@@ -29,6 +38,8 @@ python3 train.py --limit $LIMIT --epochs $EPOCHS \
     --kernel 128 \
     --batch-normalization \
     --output-dir conv2d_norm
+python3 tflitev2.py --output-dir conv2d_norm
+
 
 python3 train.py --limit $LIMIT --epochs $EPOCHS \
     --model-name conv2d \
@@ -36,3 +47,4 @@ python3 train.py --limit $LIMIT --epochs $EPOCHS \
     --kernel 128 \
     --max-pool 2 \
     --output-dir conv2d_max
+python3 tflitev2.py --output-dir conv2d_max

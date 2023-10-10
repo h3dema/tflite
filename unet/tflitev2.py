@@ -15,8 +15,7 @@ Known error on coralmicro:
 - https://github.com/tensorflow/tensorflow/issues/43232
 
 """
-
-
+import argparse
 import pathlib
 import os
 
@@ -26,10 +25,13 @@ import tensorflow as tf
 
 
 if __name__ == "__main__":
-    output_dir = "output_dir"  # where the tensorflow model is
+    parser = argparse.ArgumentParser(description='Convert to TFLITE')
+    parser.add_argument('--output-dir', type=str, default="output_dir", help="Tells the program where the TF model is save.")
     
+    args = parser.parse_args()
+       
     # convert to tflite
-    converter = tf.lite.TFLiteConverter.from_saved_model(output_dir)
+    converter = tf.lite.TFLiteConverter.from_saved_model(args.output_dir)
     #
     # see valid optimizations at https://www.tensorflow.org/api_docs/python/tf/lite/Optimize
     #
@@ -43,7 +45,7 @@ if __name__ == "__main__":
     tflite_model = converter.convert()
     # save
     tflite_model_file = pathlib.Path(
-        os.path.join(output_dir, "tflite-regression.tflite")
+        os.path.join(args.output_dir, "tflite-regression.tflite")
     )
     nbytes = tflite_model_file.write_bytes(tflite_model) 
     print("Saved tflite model at {}. Size = {} bytes".format(tflite_model_file, nbytes))
