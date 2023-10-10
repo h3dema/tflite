@@ -4,13 +4,6 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # disable all debugging logs
 
 # for bulding and running deep learning model
 import tensorflow as tf
-from tensorflow.keras.layers import Input
-from tensorflow.keras.layers import Conv2D
-# from tensorflow.keras.layers import MaxPooling2D
-# from tensorflow.keras.layers import Dropout
-from tensorflow.keras.layers import BatchNormalization
-from tensorflow.keras.layers import Conv2DTranspose
-from tensorflow.keras.layers import concatenate
 
 
 KERNEL_INITIALIZER = "HeNormal"
@@ -31,19 +24,19 @@ def EncoderMiniBlock(inputs, n_filters=32, dropout_prob=0.3, max_pooling=True):
     # Add 2 Conv Layers with relu activation and HeNormal initialization using TensorFlow
     # Proper initialization prevents from the problem of exploding and vanishing gradients
     # 'Same' padding will pad the input to conv layer such that the output has the same height and width (hence, is not reduced in size)
-    conv = Conv2D(n_filters,
-                  3,   # Kernel size
-                  activation='relu',
-                  padding='same',
-                  kernel_initializer=KERNEL_INITIALIZER)(inputs)
-    conv = Conv2D(n_filters,
-                  3,   # Kernel size
-                  activation='relu',
-                  padding='same',
-                  kernel_initializer=KERNEL_INITIALIZER)(conv)
+    conv = tf.keras.layers.Conv2D(n_filters,
+                                  3,   # Kernel size
+                                  activation='relu',
+                                  padding='same',
+                                  kernel_initializer=KERNEL_INITIALIZER)(inputs)
+    conv = tf.keras.layers.Conv2D(n_filters,
+                                  3,   # Kernel size
+                                  activation='relu',
+                                  padding='same',
+                                  kernel_initializer=KERNEL_INITIALIZER)(conv)
 
     # Batch Normalization will normalize the output of the last layer based on the batch's mean and standard deviation
-    conv = BatchNormalization()(conv, training=False)
+    conv = tf.keras.layers.BatchNormalization()(conv, training=False)
 
     # In case of overfitting, dropout will regularize the loss and gradient computation to shrink the influence of weights on output
     if dropout_prob > 0:
@@ -76,7 +69,7 @@ def DecoderMiniBlock(prev_layer_input, skip_layer_input, n_filters=32):
     The function returns the decoded layer output
     """
     # Start with a transpose convolution layer to first increase the size of the image
-    up = Conv2DTranspose(
+    up = tf.keras.layers.Conv2DTranspose(
         n_filters,
         (3, 3),    # Kernel size
         strides=(2, 2),
@@ -84,20 +77,20 @@ def DecoderMiniBlock(prev_layer_input, skip_layer_input, n_filters=32):
     )(prev_layer_input)
 
     # Merge the skip connection from previous block to prevent information loss
-    merge = concatenate([up, skip_layer_input], axis=3)
+    merge = tf.keras.layers.concatenate([up, skip_layer_input], axis=3)
 
     # Add 2 Conv Layers with relu activation and HeNormal initialization for further processing
     # The parameters for the function are similar to encoder
-    conv = Conv2D(n_filters,
-                  3,     # Kernel size
-                  activation='relu',
-                  padding='same',
-                  kernel_initializer=KERNEL_INITIALIZER)(merge)
-    conv = Conv2D(n_filters,
-                  3,   # Kernel size
-                  activation='relu',
-                  padding='same',
-                  kernel_initializer=KERNEL_INITIALIZER)(conv)
+    conv = tf.keras.layers.Conv2D(n_filters,
+                                  3,     # Kernel size
+                                  activation='relu',
+                                  padding='same',
+                                  kernel_initializer=KERNEL_INITIALIZER)(merge)
+    conv = tf.keras.layers.Conv2D(n_filters,
+                                  3,   # Kernel size
+                                  activation='relu',
+                                  padding='same',
+                                  kernel_initializer=KERNEL_INITIALIZER)(conv)
     return conv
 
 
@@ -114,7 +107,7 @@ def UNet(input_size=(128, 128, 3), n_filters=32, n_classes=3, dropout_prob=0.3):
         Return the model as output
     """
     # Input size represent the size of 1 image (the size used for pre-processing)
-    inputs = Input(input_size)
+    inputs = tf.keras.layers.Input(input_size)
 
     # Encoder includes multiple convolutional mini blocks with different maxpooling, dropout and filter parameters
     # Observe that the filters are increasing as we go deeper into the network which will increasse the # channels of the image
@@ -135,13 +128,13 @@ def UNet(input_size=(128, 128, 3), n_filters=32, n_classes=3, dropout_prob=0.3):
     # Complete the model with 1 3x3 convolution layer (Same as the prev Conv Layers)
     # Followed by a 1x1 Conv layer to get the image to the desired size.
     # Observe the number of channels will be equal to number of output classes
-    conv9 = Conv2D(n_filters,
-                   3,
-                   activation='relu',
-                   padding='same',
-                   kernel_initializer='he_normal')(ublock9)
+    conv9 = tf.keras.layers.Conv2D(n_filters,
+                                   3,
+                                   activation='relu',
+                                   padding='same',
+                                   kernel_initializer='he_normal')(ublock9)
 
-    conv10 = Conv2D(n_classes, 1, padding='same')(conv9)
+    conv10 = tf.keras.layers.Conv2D(n_classes, 1, padding='same')(conv9)
 
     # Define the model
     model = tf.keras.Model(inputs=inputs, outputs=conv10)
@@ -167,7 +160,7 @@ def ShallowUNet(input_size=(128, 128, 3), n_filters=32, n_classes=3, dropout_pro
         Return the model as output
     """
     # Input size represent the size of 1 image (the size used for pre-processing)
-    inputs = Input(input_size)
+    inputs = tf.keras.layers.Input(input_size)
 
     # Encoder includes multiple convolutional mini blocks with different maxpooling, dropout and filter parameters
     # Observe that the filters are increasing as we go deeper into the network which will increasse the # channels of the image
@@ -184,13 +177,13 @@ def ShallowUNet(input_size=(128, 128, 3), n_filters=32, n_classes=3, dropout_pro
     # Complete the model with 1 3x3 convolution layer (Same as the prev Conv Layers)
     # Followed by a 1x1 Conv layer to get the image to the desired size.
     # Observe the number of channels will be equal to number of output classes
-    conv9 = Conv2D(n_filters,
-                   3,
-                   activation='relu',
-                   padding='same',
-                   kernel_initializer='he_normal')(ublock5)
+    conv9 = tf.keras.layers.Conv2D(n_filters,
+                                   3,
+                                   activation='relu',
+                                   padding='same',
+                                   kernel_initializer='he_normal')(ublock5)
 
-    conv10 = Conv2D(n_classes, 1, padding='same')(conv9)
+    conv10 = tf.keras.layers.Conv2D(n_classes, 1, padding='same')(conv9)
 
     # Define the model
     model = tf.keras.Model(inputs=inputs, outputs=conv10)
@@ -207,4 +200,3 @@ if __name__ == "__main__":
     else:
         unet = UNet(input_size=(128, 128, 3), n_filters=32, n_classes=3)
         print(unet.summary())
-
