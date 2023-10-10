@@ -207,4 +207,3 @@ if __name__ == "__main__":
     else:
         unet = UNet(input_size=(128, 128, 3), n_filters=32, n_classes=3)
         print(unet.summary())
-

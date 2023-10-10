@@ -104,8 +104,14 @@ def plot_bias_variance(results, out_fname: str = None):
     axis[0].plot(results.history["val_loss"], color='b', label='dev loss')
     axis[0].set_title('Loss Comparison')
     axis[0].legend()
-    axis[1].plot(results.history["accuracy"], color='r', label='train accuracy')
-    axis[1].plot(results.history["val_accuracy"], color='b', label='dev accuracy')
+    if "accuracy" in results.history:
+        # tensorflow 2+
+        axis[1].plot(results.history["accuracy"], color='r', label='train accuracy')
+        axis[1].plot(results.history["val_accuracy"], color='b', label='dev accuracy')
+    else:
+        # tensorflow 1.15
+        axis[1].plot(results.history["acc"], color='r', label='train accuracy')
+        axis[1].plot(results.history["val_acc"], color='b', label='dev accuracy')
     axis[1].set_title('Accuracy Comparison')
     axis[1].legend()
 
@@ -152,26 +158,11 @@ def VisualizeResults(index, X_valid, y_valid, model):
 
 
 def train(X_train, X_valid, y_train, y_valid,
+          model,
           epochs=1,
-          input_size=(128, 128, 3),
-          shallow_unet: bool = True  # True to use shallow Unet (3 levels), False (5 levels)
           ):
     checkpoint_path = "training/cp-{epoch:04d}.ckpt"
     os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
-
-    #
-    # Net Architecture
-    #
-    #
-    # Call the helper function for defining the layers for the model, given the input image size
-    # Note: the output will be [128, 128, n_classes]
-    if shallow_unet:
-        print("Using shallow model")
-        model = ShallowUNet(input_size=input_size, n_filters=32, n_classes=3)
-    else:
-        model = UNet(input_size=input_size, n_filters=32, n_classes=3)
-    # Check the summary to better interpret how the output dimensions change in each layer
-    print("Model:\n", model.summary())
 
     # Create a callback that saves the model's weights
     cp_callback = tf.keras.callbacks.ModelCheckpoint(
@@ -217,6 +208,17 @@ def train(X_train, X_valid, y_train, y_valid,
     return model
 
 
+def NN(input_size, n_units=[128], n_classes=3):
+    # Input size represent the size of 1 image (the size used for pre-processing)
+    inputs = tf.keras.layers.Input(input_size)
+    x = inputs
+    for n in range(n_units):
+        x = tf.layers.Dense(n, activation="relu", name="layer1")(x)
+
+    model = tf.keras.Model(inputs=inputs, outputs=x)
+    return model
+
+
 if __name__ == "__main__":
     #
     # data
@@ -229,7 +231,10 @@ if __name__ == "__main__":
     parser.add_argument('--limit', type=int, default=None)
     parser.add_argument('--output_dir', type=str, default="output_dir")
     parser.add_argument('--epochs', type=int, default=20)
-    parser.add_argument('--shallow-unet', action="store_true")
+
+    parser.add_argument("--model-name", type=str, default="shallow_unet",
+                        choices=["unet", "shallow_unet"]
+                        )
 
     args = parser.parse_args()
 
@@ -269,9 +274,29 @@ if __name__ == "__main__":
     # Here, I have used 20% data as test/valid set
     X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2, random_state=123)
 
-    model = train(X_train, X_valid, y_train, y_valid,
-                  epochs=args.epochs,
-                  shallow_unet=SHALLOW_UNET)
+    #
+    # Net Architecture
+    #
+    #
+    # Call the helper function for defining the layers for the model, given the input image size
+    # Note: the output will be [128, 128, n_classes]
+    input_size = (128, 128, 3),
+    if args.model_name == "shallow_unet":
+        print("Using shallow model")
+        model = ShallowUNet(input_size=input_size, n_filters=32, n_classes=3)
+    elif args.model_name == "unet":
+        model = UNet(input_size=input_size, n_filters=32, n_classes=3)
+    elif args.model_name == "nn":
+        model = NN(input_size=input_size, n_levels=1, n_classes=3)
+    else:
+        raise Exception("Model {args.model_name} not implemented")
+    # Check the summary to better interpret how the output dimensions change in each layer
+    print("Model:\n", model.summary())
+
+    model = train(
+        X_train, X_valid, y_train, y_valid,
+        epochs=args.epochs
+    )
     #
     # to convert to tflite, the model needs to be saved using saved_model.save()
     #
